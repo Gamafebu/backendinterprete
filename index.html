@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Detector LSM Web</title>
+</head>
+<body>
+    <h1>Reconocimiento de Lengua de Señas Mexicana</h1>
+
+    <video id="video" width="400" autoplay></video>
+
+    <h2 id="letra">Letra detectada: ...</h2>
+
+    <script>
+        const video = document.getElementById("video");
+        const letraTexto = document.getElementById("letra");
+
+        // Acceder a la cámara
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => video.srcObject = stream);
+
+        // Enviar un frame al backend
+        async function sendFrame() {
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0);
+
+            // Convertir frame a blob jpeg
+            canvas.toBlob(async blob => {
+                const formData = new FormData();
+                formData.append("file", blob, "frame.jpg");
+
+                // Enviar a FastAPI
+                const res = await fetch("http://localhost:8000/predict", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await res.json();
+                letraTexto.textContent = "Letra detectada: " + data.letter;
+
+            }, "image/jpeg");
+        }
+
+        // Enviar 1 frame cada 300 ms
+        setInterval(sendFrame, 300);
+    </script>
+</body>
+</html>
